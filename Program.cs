@@ -15,7 +15,7 @@ namespace OkCNaggerBot
     {
         private const string CLIENT_ID = "AnBipXYHpG0wog";
         private const string CLIENT_SECRET = "p2GQkwOtdkb31wu1h6bTg1hR4ko";
-        private const string REFRESH_TOKEN = "dVmrzasWWkAMb8IYVqTWZZXN1-4";
+        private const string REFRESH_TOKEN = "XSWiqsVqOUcvXc3Ac3CqdHVvuxA";
         //private const string NAG_MESSAGE = "Hi.+It+looks+like+you+have+your+profile+set+as+private.++You'll+get+more+critiques+if+you+%5Bopen+it+up+in+your+settings%5D(http%3A%2F%2Fi.imgur.com%2FFOMq4AP.png).%0A%0A%0A%5E%5EI'm+%5E%5Ea+%5E%5EJSON+%5E%5Ebot+%5E%5Ewritten+%5E%5Ein+%5E%5EC%23+%5E%5E.NET.++%5B**%5E%5ESee+%5E%5Emy+%5E%5Eauthor+%5E%5Ehere.**%5D(https%3A%2F%2Fwww.google.com%2F%23q%3Dc%2523%2B.net%2Bdevelopers%2Bnew%2Byork%2Bcity)";
         //private static string TOKEN = "QhXGo0c-u3UeqQql832dVMyp03o";
         private const string REDIRECT_URI = @"http://www.reddit.com/r/okcupid";
@@ -28,21 +28,13 @@ namespace OkCNaggerBot
 
         static void Main(string[] args)
         {
-            //////test streamwriter
-            ////List<string> test = new List<string>();
-            ////test.Add("shit");
-            ////test.Add("test");
-
-            ////using(StreamWriter writer = new StreamWriter(LOG_PATH, true))
-            ////{
-            ////    foreach(string line in test)
-            ////    {
-            ////        writer.WriteLine(line);
-            ////    }
-            ////}
-
             //get the random seed, will be used later
             //Random rand = new Random((int)DateTime.Now.Ticks);
+
+            ////string test = Helpers.GetAuthUrl(OAUTH_BASE_URI, CLIENT_ID, "lajdf", Uri.EscapeDataString(REDIRECT_URI), "permanent", "read,submit,identity,privatemessages,history");
+            ////Console.WriteLine(test);
+            //string token2 = GetToken("BEP25EGt2qHPOozVFbkp2uKv5QI", Uri.EscapeDataString(REDIRECT_URI), false);
+            //Console.WriteLine(token2);
 
             //stop execution at current hour and 58 minutes... restart using sql server agent
             DateTime currentHour = Convert.ToDateTime(string.Format("{0}:00", DateTime.Now.Hour));
@@ -55,98 +47,116 @@ namespace OkCNaggerBot
             //get a running list of thingIds
             List<string> thingIds = new List<string>();
 
-            string token = "Q-y1LQu-XbJCJ4oH0BjvH09fOnk";
+            string token = "gMSqiI_m6nH26dJvTN2FmPQ5Ti8";
 
+            //main loop
             while (currentHour < nextHour)
             {
-                if (!CheckAuth(token))
+                string aboutMeString = CheckAboutMe(token);
+
+                if (aboutMeString == null)
                     token = GetToken("lazy", "lazy", true);
+                //else
+                //{
+                //    //parse the ME object
+                //    JObject aboutMe = JObject.Parse(aboutMeString);
 
-                var request = (HttpWebRequest)WebRequest.Create(string.Format(@"{0}/r/OkCupid/new.json?sort=new", OAUTH_RESOURCES_BASE));
-                request.UserAgent = "okc_nagger_bot v1";
-                request.Method = "GET";
-                request.Headers[HttpRequestHeader.Authorization] = "bearer " + token;
-                //request.ContentType = "application/json";
+                //    //do i have mail?
+                //    bool hasMail = bool.Parse(aboutMe["has_mail"].ToString());
+                //    if (hasMail)
+                //    {
+                //        //check mail for any delete requests
+                //        List<string> deleteRequests = CheckMail(token, "delete");
+                //        Console.WriteLine(deleteRequests);
 
-                using (var response = Retry.Do(() => request.GetResponse(), TimeSpan.FromSeconds(15)))
-                using (var responseStream = response.GetResponseStream())
-                using (var streamReader = new StreamReader(responseStream))
+                //        //get a list of my comments
+                //        string commentsUri = string.Format(@"{0}/user/okc_nagger_bot/comments.json?limit=100", OAUTH_RESOURCES_BASE);
+                //        string myComments = QueryTheApi(commentsUri, token);
+
+                //        //parse my comments
+                //        JObject comments = JObject.Parse(myComments);
+                //    }
+                //}
+
+                //monitor /r/OkCupid
+                var okcSubreddit = string.Format(@"{0}/r/OkCupid/new.json?sort=new", OAUTH_RESOURCES_BASE);
+                string newPosts = QueryTheApi(okcSubreddit, token);
+
+                //parse new posts
+                JObject responseJson = JObject.Parse(newPosts);
+
+                //get the posts array
+                JArray posts = responseJson["data"]["children"] as JArray;
+
+                if (posts == null)
                 {
-                    //parse new posts
-                    JObject responseJson = JObject.Parse(streamReader.ReadToEnd());
-
-                    //get the posts array
-                    JArray posts = responseJson["data"]["children"] as JArray;
-
-                    if (posts == null)
-                    {
-                        posts = new JArray
+                    posts = new JArray
                     {
                         responseJson["data"]["children"]
                     };
-                    }
+                }
 
-                    //limit the number of calls per sec
-                    using (var rateGate = new RateGate(1, TimeSpan.FromMilliseconds(700)))
+                //limit the number of calls per sec
+                using (var rateGate = new RateGate(1, TimeSpan.FromMilliseconds(700)))
+                {
+                    //parse posts individually
+                    foreach (JToken post in posts)
                     {
-                        //parse posts individually
-                        foreach (JToken post in posts)
+                        //wait to proceed
+                        rateGate.WaitToProceed();
+
+                        JToken postContainer = post["data"];
+                        string thingId = postContainer["name"].ToString();
+
+                        Console.WriteLine("Processing post...");
+
+                        //must not have been processed
+                        if (thingIds.Contains(thingId) || loggedThings.Contains(thingId))
+                            continue;
+
+                        //only parse it if it's a post
+                        //see https://www.reddit.com/dev/api for more info
+                        if (post["kind"].ToString() != "t3")
+                            continue;
+
+                        //is it a critique request?
+                        if (CheckIsCritiqueRequest(postContainer["selftext"].ToString(), postContainer["title"].ToString()))
                         {
-                            //wait to proceed
-                            rateGate.WaitToProceed();
+                            string uri = postContainer["url"].ToString();
+                            bool selfPost = bool.Parse(postContainer["is_self"].ToString());
 
-                            JToken postContainer = post["data"];
-                            string thingId = postContainer["name"].ToString();
-
-                            Console.WriteLine("Processing post...");
-
-                            //must not have been processed
-                            if (!thingIds.Contains(thingId) && !loggedThings.Contains(thingId))
+                            if (selfPost)
                             {
-                                //only parse it if it's a post
-                                //see https://www.reddit.com/dev/api for more info
-                                if (post["kind"].ToString() == "t3")
+                                string seftText = postContainer["selftext"].ToString();
+
+                                //use regex to search for the url
+                                string re1 = ".*?";	// Non-greedy match on filler
+                                string re2 = "((?:http|https)(?::\\/{2}[\\w]+)(?:[\\/|\\.]?)(?:[^\\s\"]*))";
+
+                                //match the regex
+                                Regex r = new Regex(re1 + re2, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                                Match m = r.Match(seftText);
+
+                                //pull the url out
+                                if (m.Success)
                                 {
-                                    //is it a critique request?
-                                    if (CheckIsCritiqueRequest(postContainer["selftext"].ToString(), postContainer["title"].ToString()))
-                                    {
-                                        string uri = postContainer["url"].ToString();
-                                        bool selfPost = bool.Parse(postContainer["is_self"].ToString());
+                                    string okCupidUrl = m.Groups[1].ToString();
 
-                                        if (selfPost)
-                                        {
-                                            string seftText = postContainer["selftext"].ToString();
-
-                                            //use regex to search for the url
-                                            string re1 = ".*?";	// Non-greedy match on filler
-                                            string re2 = "((?:http|https)(?::\\/{2}[\\w]+)(?:[\\/|\\.]?)(?:[^\\s\"]*))";
-
-                                            //match the regex
-                                            Regex r = new Regex(re1 + re2, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                                            Match m = r.Match(seftText);
-
-                                            //pull the url out
-                                            if (m.Success)
-                                            {
-                                                string okCupidUrl = m.Groups[1].ToString();
-
-                                                //got the url... go noag
-                                                VisitAndNag(okCupidUrl, thingId, token);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            //does it contain a link to the profile?
-                                            if (uri.ContainsIgnoreCase("okcupid"))
-                                                VisitAndNag(uri, thingId, token);
-                                        }
-                                    }
+                                    //got the url... go noag
+                                    VisitAndNag(okCupidUrl, thingId, token);
                                 }
-
-                                //add thing id to running list
-                                thingIds.Add(thingId);
+                            }
+                            else
+                            {
+                                //does it contain a link to the profile?
+                                if (uri.ContainsIgnoreCase("okcupid"))
+                                    VisitAndNag(uri, thingId, token);
                             }
                         }
+
+                            //add thing id to running list
+                            thingIds.Add(thingId);
+                        //}
                     }
                 }
 
@@ -159,7 +169,7 @@ namespace OkCNaggerBot
                 if (currentHour.Hour > 1 && currentHour.Hour < 10)
                     Thread.Sleep(TimeSpan.FromMinutes(15));
                 else
-                    Thread.Sleep(TimeSpan.FromMinutes(7));
+                    Thread.Sleep(TimeSpan.FromMinutes(6));
             }
 
             //write thing ids to text file and exit
@@ -170,6 +180,96 @@ namespace OkCNaggerBot
                     writer.WriteLine(thing);
                 }
             }
+        }
+
+        public static void PostTheApi(string uri, string postContent, string token)
+        {
+            var request = (HttpWebRequest)WebRequest.Create(uri);
+            request.UserAgent = "okc_nagger_bot v1";
+            request.Method = "POST";
+            request.Headers[HttpRequestHeader.Authorization] = "bearer " + token;
+            request.ContentLength = postContent.Length;
+            request.ContentType = "application/x-www-form-urlencoded";
+
+            using(var writer = new StreamWriter(request.GetRequestStream()))
+            {
+                Retry.Do(() => writer.Write(postContent), TimeSpan.FromSeconds(15));
+            }
+        }
+
+        public static string QueryTheApi(string uri, string token)
+        {
+            string results = default(string);
+
+            var request = (HttpWebRequest)WebRequest.Create(uri);
+            request.UserAgent = "okc_nagger_bot v1";
+            request.Method = "GET";
+            request.Headers[HttpRequestHeader.Authorization] = "bearer " + token;
+
+            using (var response = Retry.Do(() => request.GetResponse(), TimeSpan.FromSeconds(15)))
+            using (var responseStream = response.GetResponseStream())
+            using (var streamReader = new StreamReader(responseStream))
+            {
+                results = streamReader.ReadToEnd();
+            }
+
+            return results;
+        }
+
+        public static List<string> CheckMail(string token, string subject)
+        {
+            List<string> returnIds = new List<string>();
+
+            //request for messages
+            string mailUri = string.Format("{0}/message/unread", OAUTH_RESOURCES_BASE);
+
+            //get the json mail into a string
+            string newMail = QueryTheApi(mailUri, token);
+
+            //parse
+            JObject newMailJson = JObject.Parse(newMail);
+
+            //put messages into an array
+            JArray messages = newMailJson["data"]["children"] as JArray;
+            if(messages == null)
+            {
+                messages = new JArray
+                {
+                    newMailJson["data"]["children"]
+                };
+            }
+
+            foreach(var message in messages)
+            {
+                //skip it if it's not a mail item
+                if (message["kind"].ToString() != "t4")
+                    continue;
+
+                //get the message itself
+                JToken messageData = message["data"];
+                string msgSubject = messageData["subject"].ToString();
+
+                //skip it if it doesn't contain the search string
+                if (!msgSubject.Contains(subject))
+                    continue;
+
+                string thingAuthor = messageData["author"].ToString();
+                string thingId = messageData["body"].ToString();
+                string msgId = messageData["name"].ToString();
+
+                //first, mark the message as read
+                string readUri = string.Format("{0}/api/read_message", OAUTH_RESOURCES_BASE);
+                string readId = "id=" + msgId;
+                PostTheApi(readUri, readId, token);
+
+                //thing id doesn't fit length criteria
+                if (thingId.Length != 6)
+                    continue;
+
+                returnIds.Add(thingAuthor + @";" + thingId);
+            }
+
+            return returnIds;
         }
 
         public static void VisitAndNag(string uri, string thingId, string token)
@@ -269,11 +369,11 @@ namespace OkCNaggerBot
                 return false;
         }
 
-        public static bool CheckAuth(string token)
+        public static string CheckAboutMe(string token)
         {
             string response = ReturnWebResponse(string.Format(@"{0}/api/v1/me", OAUTH_RESOURCES_BASE), token);
 
-            return response != null;
+            return response;
         }
 
         public static string GetToken(string code, string redirectUri, bool isRefresh = false)
@@ -283,7 +383,7 @@ namespace OkCNaggerBot
             
             string grantString = default(string);
 
-            if (isRefresh == true)
+            if (isRefresh)
                 grantString = string.Format("grant_type=refresh_token&refresh_token={0}", REFRESH_TOKEN);
             else
                 grantString = string.Format("grant_type={0}&code={1}&redirect_uri={2}", System.Uri.EscapeDataString("authorization_code"), code, redirectUri);
