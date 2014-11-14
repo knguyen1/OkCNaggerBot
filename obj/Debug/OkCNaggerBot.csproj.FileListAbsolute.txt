@@ -1,0 +1,8 @@
+c:\users\knguyen\documents\visual studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Debug\OkCNaggerBot.exe.config
+c:\users\knguyen\documents\visual studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\obj\Debug\OkCNaggerBot.csprojResolveAssemblyReference.cache
+c:\users\knguyen\documents\visual studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Debug\OkCNaggerBot.exe
+c:\users\knguyen\documents\visual studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Debug\OkCNaggerBot.pdb
+c:\users\knguyen\documents\visual studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\obj\Debug\OkCNaggerBot.exe
+c:\users\knguyen\documents\visual studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\obj\Debug\OkCNaggerBot.pdb
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Debug\Newtonsoft.Json.dll
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Debug\Newtonsoft.Json.xml

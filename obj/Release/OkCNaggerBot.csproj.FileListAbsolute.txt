@@ -1,0 +1,7 @@
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Release\OkCNaggerBot.exe.config
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Release\OkCNaggerBot.exe
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Release\OkCNaggerBot.pdb
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Release\Newtonsoft.Json.dll
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Release\Newtonsoft.Json.xml
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\obj\Release\OkCNaggerBot.exe
+C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\obj\Release\OkCNaggerBot.pdb
