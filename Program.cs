@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Linq;
 
 namespace OkCNaggerBot
 {
@@ -22,11 +23,24 @@ namespace OkCNaggerBot
         private const string OAUTH_BASE_URI = @"https://ssl.reddit.com/api/v1/authorize?";
         private const string TOKEN_BASE_URI = @"https://ssl.reddit.com/api/v1/access_token";
         private const string OAUTH_RESOURCES_BASE = @"https://oauth.reddit.com";
-        private const string LOG_PATH = @"G:\Prisma API\okcnb\logged_thingies.txt";
-        //private const string LOG_PATH = @"C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Release\logged_thingies.txt";
+        //private const string LOG_PATH = @"G:\Prisma API\okcnb\logged_thingies.txt";
+        private const string LOG_PATH = @"C:\Users\knguyen\Documents\Visual Studio 2013\Projects\OkCNaggerBot\OkCNaggerBot\bin\Release\logged_thingies.txt";
 
         static void Main(string[] args)
         {
+            //////test streamwriter
+            ////List<string> test = new List<string>();
+            ////test.Add("shit");
+            ////test.Add("test");
+
+            ////using(StreamWriter writer = new StreamWriter(LOG_PATH, true))
+            ////{
+            ////    foreach(string line in test)
+            ////    {
+            ////        writer.WriteLine(line);
+            ////    }
+            ////}
+
             //get the random seed, will be used later
             //Random rand = new Random((int)DateTime.Now.Ticks);
 
@@ -35,8 +49,8 @@ namespace OkCNaggerBot
             DateTime nextHour = currentHour.AddHours(1).AddMinutes(-5);
 
             //read from a list of thingies already processed
-            var loggedThingsArray = File.ReadAllLines(LOG_PATH);
-            List<string> loggedThingsList = new List<string>(loggedThingsArray);
+            var loggedThings = File.ReadAllLines(LOG_PATH);
+            //List<string> loggedThingsList = new List<string>(loggedThingsArray);
 
             //get a running list of thingIds
             List<string> thingIds = new List<string>();
@@ -87,7 +101,7 @@ namespace OkCNaggerBot
                             Console.WriteLine("Processing post...");
 
                             //must not have been processed
-                            if (!thingIds.Contains(thingId) && !loggedThingsList.Contains(thingId))
+                            if (!thingIds.Contains(thingId) && !loggedThings.Contains(thingId))
                             {
                                 //only parse it if it's a post
                                 //see https://www.reddit.com/dev/api for more info
@@ -142,14 +156,20 @@ namespace OkCNaggerBot
                 Console.WriteLine("Sleeping...");
 
                 //sleep for x minutes
-                if (currentHour.Hour > 1 && currentHour.Hour < 9)
-                    Thread.Sleep(TimeSpan.FromMinutes(10));
+                if (currentHour.Hour > 1 && currentHour.Hour < 10)
+                    Thread.Sleep(TimeSpan.FromMinutes(15));
                 else
-                    Thread.Sleep(TimeSpan.FromMinutes(3));
+                    Thread.Sleep(TimeSpan.FromMinutes(7));
             }
 
             //write thing ids to text file and exit
-            File.WriteAllLines(LOG_PATH, thingIds);
+            using(var writer = new StreamWriter(LOG_PATH, true))
+            {
+                foreach(string thing in thingIds)
+                {
+                    writer.WriteLine(thing);
+                }
+            }
         }
 
         public static void VisitAndNag(string uri, string thingId, string token)
@@ -253,10 +273,7 @@ namespace OkCNaggerBot
         {
             string response = ReturnWebResponse(string.Format(@"{0}/api/v1/me", OAUTH_RESOURCES_BASE), token);
 
-            if (response != null)
-                return true;
-            else
-                return false;
+            return response != null;
         }
 
         public static string GetToken(string code, string redirectUri, bool isRefresh = false)
